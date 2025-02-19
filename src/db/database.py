@@ -1,8 +1,18 @@
 import sqlite3
+import os
 from pathlib import Path
 
 
-DATABASE_PATH = Path(__file__).parent / "tasks.db"
+# Get user's data directory
+if os.name == 'nt':  # Windows
+    DATA_DIR = Path(os.getenv('APPDATA')) / "TodoManager"
+else:  # Linux/Mac
+    DATA_DIR = Path.home() / ".TodoManager"
+
+# Create data directory if it doesn't exist
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+DATABASE_PATH = DATA_DIR / "tasks.db"
 
 
 def create_connection():
@@ -25,8 +35,6 @@ def create_table():
     """Creates the tasks table if it doesn't exist."""
     with sqlite3.connect(DATABASE_PATH) as conn:
         cursor = conn.cursor()
-        # Drop existing table to ensure correct schema
-        cursor.execute("DROP TABLE IF EXISTS tasks")
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS tasks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
