@@ -1,7 +1,8 @@
 # TodoManager
 
 A modern, hierarchical task management application built with PyQt6.
-
+![添加任务](assets/demo1.png)
+![pin显示，更改状态](assets/demo2.png)
 ## Features
 
 ### Task Management
@@ -55,6 +56,28 @@ venv\Scripts\activate     # Windows
 3. Install dependencies:
 ```bash
 pip install -r requirements.txt
+```
+
+4. Initialize the database:
+```bash
+python src/db/database.py
+```
+
+5. Run the application:
+```bash
+python src/main.py
+```
+
+## Packaging
+
+1. Install PyInstaller:
+```bash
+pip install pyinstaller
+```
+
+2. Create the executable:
+```bash
+pyinstaller --onefile --windowed --name TodoManager --icon=assets/icon.ico --add-data "src;src" --hidden-import sqlite3 src/main.py
 ```
 
 ## Usage

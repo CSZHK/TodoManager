@@ -90,6 +90,7 @@ TodoManager/
 - Release Date: 2025-02-19
 - Framework: PyQt6
 - Database: SQLite
+- Packaging: PyInstaller
 
 ### Usage Tips
 1. **Task Selection**
