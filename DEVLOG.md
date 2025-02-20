@@ -60,21 +60,21 @@
 ## Development Timeline
 
 ### Phase 1: Foundation (Completed)
-- ✅ Basic task management
-- ✅ Database implementation
-- ✅ Core UI components
+- Basic task management
+- Database implementation
+- Core UI components
 
 ### Phase 2: Enhancement (Current)
-- ✅ Theme support
-- ✅ Batch operations
-- ✅ Task hierarchy
-- 🔄 Performance optimization
+- Theme support
+- Batch operations
+- Task hierarchy
+- Performance optimization
 
 ### Phase 3: Advanced Features (Planned)
-- ⏳ Task automation
-- ⏳ Data analytics
-- ⏳ Cloud sync
-- ⏳ Mobile companion app
+- Task automation
+- Data analytics
+- Cloud sync
+- Mobile companion app
 
 ## Contribution Guidelines
 
@@ -134,3 +134,24 @@
    - Latest version: Full support
    - Previous version: Bug fixes only
    - Older versions: Security patches only
+
+## Development Log
+
+### 2025-02-20
+#### Updates
+- Enhanced task status visualization using different colors.
+- Implemented visual distinction between parent and child tasks, with child tasks displayed in italics and a light gray background.
+- Added detailed log recording functionality for tracking task processing errors.
+- Optimized error handling to prevent single task processing failures from affecting other tasks.
+
+#### Future Plans
+- Implement task reminders.
+- Add task tags/categories functionality.
+- Implement task import/export functionality.
+- Add task statistics and reporting functionality.
+- Optimize database query performance.
+
+### 2025-02-20
+- 优化任务管理UI，增强任务状态显示
+- 改进批量任务录入逻辑，确保子任务和父任务的关系正确
+- 修复任务行背景颜色设置方法

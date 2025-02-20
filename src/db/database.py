@@ -48,6 +48,9 @@ def create_table():
                 FOREIGN KEY(parent_id) REFERENCES tasks(id)
             )
         """)
+        # 添加索引
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_parent_id ON tasks(parent_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)")
         conn.commit()
 
 def execute(query, params=()):

@@ -12,10 +12,12 @@ else:
 from ui.main_window_qt import TaskManagerApp
 from PyQt6.QtWidgets import QApplication
 from db import database
+from logic.task_manager import TaskManager
 
 if __name__ == "__main__":
     database.create_table()
+    task_manager = TaskManager()
     app = QApplication(sys.argv)
-    window = TaskManagerApp()
+    window = TaskManagerApp(task_manager)
     window.show()
     app.exec()

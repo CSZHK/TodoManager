@@ -1,41 +1,64 @@
 # TodoManager
 
-A modern, hierarchical task management application built with PyQt6.
-![添加任务](assets/demo1.png)
-![pin显示，更改状态](assets/demo2.png)
-## Features
+## 项目简介
+TodoManager 是一个基于 PyQt6 的任务管理应用程序，支持任务的层级管理（父任务和子任务）以及任务状态的可视化展示。
 
-### Task Management
-- Add individual tasks
-- Batch import tasks
-- Delete multiple tasks
-- Update task status
-- Parent-child relationships
+## 核心功能
+- 任务管理：创建、编辑、删除任务
+- 支持父任务和子任务的层级关系
+- 任务状态跟踪（未开始、进行中、已完成）
+- 任务优先级设置
+- 支持设置任务截止日期
+- 现代化的用户界面，支持浅色/深色主题切换
 
-### Progress Tracking
-- Visual progress bar with color coding
-- Task status breakdown:
-  - Completed (Green)
-  - In Progress (Orange)
-  - Not Started (Red)
+## 最新更新 (2025-02-20)
+### 任务显示优化
+- 增强了任务状态的视觉区分：
+  - 未开始：红色系
+  - 进行中：橙色系
+  - 已完成：绿色系
 
-### User Interface
-- Light/Dark theme support
-- Modern, clean interface
-- Smooth transitions
-- Right-click context menu
+### 父子任务区分
+- 父任务使用完整状态颜色，字体加粗，白色背景
+- 子任务使用半透明状态颜色，斜体字体，浅灰色背景，缩进显示
 
-### Data Management
-- SQLite database backend
-- Efficient batch operations
-- Cascade deletion for subtasks
-- Data integrity protection
+### 系统改进
+- 添加了详细的日志系统，包含任务处理的详细信息和错误追踪
+- 优化了错误处理机制，单个任务处理失败不影响其他任务的显示
 
-## Recent Updates
-- Immediate task deletion without confirmation
-- Enhanced progress visualization
-- Temporary success messages
-- Comprehensive logging system
+## 技术栈
+- 前端：PyQt6
+- 数据存储：SQLite3
+- 开发语言：Python
+
+## 项目结构
+```
+TodoManager/
+├── src/
+│   ├── ui/
+│   │   └── main_window_qt.py    # 主窗口和UI逻辑
+│   ├── logic/
+│   │   └── task_manager.py      # 任务管理逻辑
+│   └── db/
+│       └── database.py          # 数据库操作
+├── README.md                    # 项目说明
+└── note.md                      # 开发笔记
+```
+
+## 使用说明
+1. 克隆项目
+2. 安装依赖
+3. 运行应用程序
+
+## 待办事项
+- 实现任务提醒功能
+- 添加任务标签/分类功能
+- 实现任务导入/导出功能
+- 添加任务统计和报告功能
+- 优化数据库查询性能
+
+## 已知问题
+- 无
 
 ## Installation
 
@@ -79,66 +102,6 @@ pip install pyinstaller
 ```bash
 pyinstaller --onefile --windowed --name TodoManager --icon=assets/icon.ico --add-data "src;src" --hidden-import sqlite3 src/main.py
 ```
-
-## Usage
-
-1. Run the application:
-```bash
-python src/main.py
-```
-
-2. Use the toolbar controls:
-   - Pin/unpin window
-   - Show/hide task editing
-   - Toggle Light/Dark theme
-
-3. Manage tasks:
-   - Add individual tasks with title and description
-   - Import multiple tasks at once
-   - Update task status (Not Started, In Progress, Completed)
-   - View task hierarchy and progress
-
-## Development
-
-### Project Structure
-```
-TodoManager/
-├── src/
-│   ├── db/
-│   │   └── database.py    # Database operations
-│   ├── logic/
-│   │   └── task_manager.py # Business logic
-│   ├── ui/
-│   │   ├── main_window_qt.py # UI implementation
-│   │   └── themes.py      # Theme management
-│   ├── version.py        # Version control
-│   └── main.py          # Application entry
-├── requirements.txt     # Dependencies
-└── README.md           # Documentation
-```
-
-### Version Control
-
-We follow [Semantic Versioning](https://semver.org/):
-- MAJOR version for incompatible API changes
-- MINOR version for new functionality in a backward compatible manner
-- PATCH version for backward compatible bug fixes
-
-### Upgrade Strategy
-
-1. **Database Migrations**:
-   - Version-specific migration scripts in `db/migrations/`
-   - Automatic migration on startup
-
-2. **Feature Updates**:
-   - New features added in MINOR versions
-   - Bug fixes in PATCH versions
-   - Breaking changes reserved for MAJOR versions
-
-3. **UI Updates**:
-   - Theme improvements in PATCH versions
-   - New UI components in MINOR versions
-   - Layout changes in MAJOR versions
 
 ## Contributing
 
