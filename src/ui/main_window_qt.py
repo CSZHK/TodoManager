@@ -1,11 +1,11 @@
 from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QPushButton, QLabel, QLineEdit, QTextEdit, QTableWidget,
-    QTableWidgetItem, QMessageBox, QGroupBox, QHeaderView,
-    QToolBar, QApplication, QMenu, QProgressBar, QStyledItemDelegate,
-    QListWidgetItem, QListWidget
+    QMainWindow, QTableWidgetItem, QMessageBox, QMenu,
+    QToolBar, QApplication, QProgressBar, QStyledItemDelegate,
+    QListWidgetItem, QListWidget, QWidget, QVBoxLayout, QHBoxLayout,
+    QPushButton, QLabel, QLineEdit, QTextEdit, QTableWidget, QGroupBox, QHeaderView,
+    QFormLayout
 )
-from PyQt6.QtCore import Qt, QTimer, QRect
+from PyQt6.QtCore import Qt, QTimer, QRect, QModelIndex
 from PyQt6.QtGui import QAction, QFont, QPainter, QPen, QColor, QIcon
 from logic import task_manager
 from db import database
@@ -185,26 +185,33 @@ class TaskManagerApp(QMainWindow):
         
         # Initialize tasks list
         self.tasks = []
+        self.flat_tasks = []
         
         # 定义状态样式
         self.status_styles = {
             'Not Started': {
-                'color': '#FF4D4D',  # 红色
+                'color': '#FF4D4D',
                 'icon': '⭕',
-                'background': '#FFF0F0',  # 浅红色背景
-                'text_color': '#D32F2F'   # 深红色文字
+                'background': '#FFF0F0',
+                'text_color': '#D32F2F',
+                'parent_background': '#FFE0E0',
+                'parent_text_color': '#B71C1C'
             },
             'In Progress': {
-                'color': '#FF8C00',  # 橙色
+                'color': '#FF8C00',
                 'icon': '⏳',
-                'background': '#FFF4E6',  # 浅橙色背景
-                'text_color': '#2196F3'   # 蓝色文字
+                'background': '#FFF4E6',
+                'text_color': '#2196F3',
+                'parent_background': '#FFE8CC',
+                'parent_text_color': '#1976D2'
             },
             'Completed': {
-                'color': '#4CAF50',  # 绿色
+                'color': '#4CAF50',
                 'icon': '✅',
-                'background': '#F0FFF0',  # 浅绿色背景
-                'text_color': '#2E7D32'   # 深绿色文字
+                'background': '#E8F5E9',
+                'text_color': '#388E3C',
+                'parent_background': '#C8E6C9',
+                'parent_text_color': '#1B5E20'
             }
         }
         
@@ -540,90 +547,89 @@ class TaskManagerApp(QMainWindow):
     def load_tasks(self):
         """Load tasks and display them in the table."""
         # Get tasks from database
-        tasks = self.task_manager.get_tasks()
+        self.tasks = self.task_manager.get_tasks()
         
-        # Clear the table first
-        self.task_table.clearContents()
-        self.task_table.setRowCount(len(tasks))
+        # 展开任务层级为平面列表
+        self.flat_tasks = []
+        def flatten_tasks(tasks, level=0):
+            for task in tasks:
+                task['_level'] = level  # 添加层级信息
+                self.flat_tasks.append(task)
+                if 'children' in task:
+                    flatten_tasks(task['children'], level + 1)
         
-        # 设置表头样式
-        header = self.task_table.horizontalHeader()
-        header.setStyleSheet("QHeaderView::section { background-color: #f0f0f0; padding: 4px; border: none; }")
+        flatten_tasks(self.tasks)
+        self.task_table.setRowCount(len(self.flat_tasks))
         
-        for i, task in enumerate(tasks):
-            # Title with hierarchy
-            title_item = QTableWidgetItem()
-            if task.get('parent_id'):
-                title_item.setText("    ↳ " + task['title'])  # 子任务前加缩进和箭头
-                title_item.setForeground(QColor("#666666"))
-                title_item.setIcon(QIcon('path/to/icon.png'))  # 设置子任务图标
-            else:
-                title_item.setText(task['title'])
-                font = title_item.font()
-                font.setBold(True)
-                title_item.setFont(font)
-            self.task_table.setItem(i, 0, title_item)
-            
-            # Description
-            desc_item = QTableWidgetItem(task['description'] or "")
-            desc_item.setForeground(QColor("#666666"))
-            self.task_table.setItem(i, 1, desc_item)
-            
-            # Status with modern styling
-            status_item = QTableWidgetItem()
-            status_style = self.status_styles.get(task['status'].replace('_', ' ').title(), {})
-            status_text = f"{status_style.get('icon', '•')} {task['status'].replace('_', ' ').title()}"
-            status_item.setText(status_text)
-            status_item.setBackground(QColor(status_style.get('background', '#FFFFFF')))
-            status_item.setForeground(QColor(status_style.get('text_color', '#000000')))
-            self.task_table.setItem(i, 2, status_item)
-            
-            # 根据状态设置行背景颜色
-            for j in range(self.task_table.columnCount()):
-                item = self.task_table.item(i, j)
-                if item:
-                    if task['status'] == 'not_started':
-                        item.setBackground(QColor('#FFEBEE'))  # 浅红色
-                        item.setForeground(QColor(status_style.get('text_color', '#D32F2F')))  # 红色字体
-                    elif task['status'] == 'in_progress':
-                        item.setBackground(QColor('#FFF3E0'))  # 浅橙色
-                        item.setForeground(QColor('#2196F3'))  # 蓝色字体
-                    elif task['status'] == 'completed':
-                        item.setBackground(QColor('#E8F5E9'))  # 浅绿色
-                        item.setForeground(QColor(status_style.get('text_color', '#2E7D32')))  # 绿色字体
+        for row, task in enumerate(self.flat_tasks):
+            try:
+                logger.debug(f"处理任务: ID={task['id']}, 标题={task['title']}, 父任务ID={task.get('parent_id')}")
+                
+                # 标准化状态并设置样式
+                status = task['status'].replace('_', ' ').title()
+                status_style = self.status_styles.get(status, {})
+                logger.debug(f"任务状态: {status}, 样式: {status_style}")
+                
+                # 设置标题
+                title_item = QTableWidgetItem()
+                indent = "    " * task['_level']
+                arrow = "→ " if task['_level'] > 0 else ""
+                title_item.setText(f"{indent}{arrow}{task['title']}")
+                
+                # 设置父/子任务样式
+                if task['_level'] > 0:
+                    title_item.setForeground(QColor("#666666"))
+                    title_item.setIcon(QIcon(':/icons/subtask.png'))
+                else:
+                    font = title_item.font()
+                    font.setBold(True)
+                    title_item.setFont(font)
+                
+                self.task_table.setItem(row, 0, title_item)
+                
+                # 设置描述
+                desc_item = QTableWidgetItem(task.get('description', '') or '')
+                desc_item.setForeground(QColor("#666666"))
+                self.task_table.setItem(row, 1, desc_item)
+                
+                # 设置状态
+                status_item = QTableWidgetItem(status)
+                status_item.setForeground(QColor(status_style.get('color', 'black')))
+                self.task_table.setItem(row, 2, status_item)
+                
+                # 根据状态设置行背景颜色
+                for j in range(self.task_table.columnCount()):
+                    item = self.task_table.item(row, j)
+                    if item:
+                        if task['status'] == 'not_started':
+                            item.setBackground(QColor('#FFEBEE'))  # 浅红色
+                            item.setForeground(QColor(status_style.get('text_color', '#D32F2F')))  # 红色字体
+                        elif task['status'] == 'in_progress':
+                            item.setBackground(QColor('#FFF3E0'))  # 浅橙色
+                            item.setForeground(QColor('#2196F3'))  # 蓝色字体
+                        elif task['status'] == 'completed':
+                            item.setBackground(QColor('#E8F5E9'))  # 浅绿色
+                            item.setForeground(QColor(status_style.get('text_color', '#2E7D32')))  # 绿色字体
         
-            # Due date
-            due_date = task.get('due_date', '')
-            due_date_item = QTableWidgetItem(due_date if due_date else "")
-            if due_date:
-                due_date_item.setForeground(QColor("#1976D2"))
-            self.task_table.setItem(i, 3, due_date_item)
-    
-        # 设置表格样式
-        self.task_table.setStyleSheet("""
-            QTableWidget {
-                border: none;
-                gridline-color: #f0f0f0;
-            }
-            QTableWidget::item {
-                padding: 8px;
-                border-bottom: 1px solid #f0f0f0;
-            }
-            QTableWidget::item:selected {
-                background-color: #e3f2fd;
-                color: #000000;
-            }
-        """)
-    
+                # Due date
+                due_date = task.get('due_date', '')
+                due_date_item = QTableWidgetItem(due_date if due_date else "")
+                if due_date:
+                    due_date_item.setForeground(QColor("#1976D2"))
+                self.task_table.setItem(row, 3, due_date_item)
+
+            except Exception as e:
+                logger.error(f"处理任务时出错: {e}", exc_info=True)
+                continue  # 跳过处理出错的任务，继续处理下一个
+                
+        logger.info("任务显示更新完成")
+        
+        # Update progress display
+        self.update_progress_display()
+        
         # Resize columns to content
         self.task_table.resizeColumnsToContents()
         self.task_table.horizontalHeader().setStretchLastSection(True)
-    
-        # Update progress display
-        self.update_progress_display()
-    
-        # Store tasks for later use
-        self.tasks = tasks
 
     def add_task(self):
         """Add a new task."""
@@ -660,15 +666,23 @@ class TaskManagerApp(QMainWindow):
 
     def update_status(self, status):
         """Updates the status of the selected task."""
-        selected_row = self.task_table.currentRow()
-        if selected_row >= 0 and selected_row < len(self.tasks):
-            task_id = self.tasks[selected_row]['id']
-            # 更新任务状态
+        selected_rows = self.task_table.selectionModel().selectedRows()
+        if not selected_rows:
+            QMessageBox.warning(self, "错误", "请先选择要更新的任务！")
+            return
+
+        task_ids = []
+        for row in selected_rows:
+            row_idx = row.row()
+            if 0 <= row_idx < len(self.flat_tasks):
+                task_ids.append(self.flat_tasks[row_idx]['id'])
+        
+        logger.debug(f"待更新任务ID列表: {task_ids}")
+        
+        for task_id in task_ids:
             self.task_manager.update_task_status(task_id, status)
-            # 重新加载任务列表以显示更新
-            self.load_tasks()
-        else:
-            QMessageBox.warning(self, "错误", "请先选择一个任务！")
+        
+        self.load_tasks()
 
     def clear_tasks(self):
         """Clear all tasks without confirmation."""
@@ -696,43 +710,51 @@ class TaskManagerApp(QMainWindow):
             return
         
         lines = text.split('\n')
-        parent_id = None
+        current_parent_id = None
+        tasks_added = 0
         
         for line in lines:
-            line = line.strip()
+            original_line = line
+            line = line.rstrip()  # 保留左侧空格，去除右侧空格
             if not line:
                 continue
             
-            # 判断是否是子任务
-            if line.startswith('    '):  # 4 spaces for subtasks
-                if parent_id is None:
+            # 计算缩进级别（每个缩进是4个空格）
+            indent_level = len(line) - len(line.lstrip())
+            is_subtask = indent_level >= 4
+            title = line.strip()
+            
+            if is_subtask:
+                if current_parent_id is None:
                     QMessageBox.warning(self, "错误", "子任务前必须有父任务！")
                     return
-                task_data = {
-                    'title': line.strip(),
-                    'description': '',
-                    'priority': 'medium',
-                    'status': 'not_started',
-                    'due_date': None,
-                    'depends_on': None,
-                    'parent_id': parent_id
-                }
+                # 添加子任务
+                self.task_manager.add_task(
+                    title=title,
+                    description='',
+                    priority='medium',
+                    status='not_started',
+                    due_date=None,
+                    depends_on=None,
+                    parent_id=current_parent_id
+                )
             else:
-                task_data = {
-                    'title': line,
-                    'description': '',
-                    'priority': 'medium',
-                    'status': 'not_started',
-                    'due_date': None,
-                    'depends_on': None,
-                    'parent_id': None
-                }
-                # 添加父任务并获取其ID
-                parent_id = self.task_manager.add_task(**task_data)
+                # 添加父任务
+                current_parent_id = self.task_manager.add_task(
+                    title=title,
+                    description='',
+                    priority='medium',
+                    status='not_started',
+                    due_date=None,
+                    depends_on=None,
+                    parent_id=None
+                )
+            tasks_added += 1
         
         # 刷新任务列表
         self.load_tasks()
-        QMessageBox.information(self, "成功", f"已批量添加 {len(lines)} 个任务！")
+        self.batch_import_text.clear()
+        QMessageBox.information(self, "成功", f"成功导入 {tasks_added} 个任务！")
 
     def toggle_pin(self):
         flags = self.windowFlags()
@@ -745,15 +767,20 @@ class TaskManagerApp(QMainWindow):
 
     def toggle_edit_mode(self):
         """Toggle visibility of edit sections."""
+        # 获取当前编辑按钮的状态
         show = self.edit_action.isChecked()
+        
+        # 设置编辑区域和批量导入区域的可见性
         self.edit_section.setVisible(show)
         self.batch_section.setVisible(show)
         
-        # Adjust window size smoothly
+        # 调整窗口大小
         if show:
-            self.edit_section.setMaximumHeight(16777215)  # Remove height constraint
+            # 显示编辑区域时，移除高度限制
+            self.edit_section.setMaximumHeight(16777215)
             self.batch_section.setMaximumHeight(16777215)
         else:
+            # 隐藏编辑区域时，设置高度为0
             self.edit_section.setMaximumHeight(0)
             self.batch_section.setMaximumHeight(0)
 
@@ -782,13 +809,8 @@ class TaskManagerApp(QMainWindow):
             QMessageBox.warning(self, "错误", "请先选择要删除的任务！")
             return
         
-        # Get task IDs from selected rows
-        task_ids = []
-        for row in selected_rows:
-            row_index = row.row()
-            if 0 <= row_index < len(self.tasks):
-                task_id = self.tasks[row_index]['id']
-                task_ids.append(task_id)
+        # 获取平面化后的任务列表
+        task_ids = [self.flat_tasks[row.row()]['id'] for row in selected_rows if row.row() < len(self.flat_tasks)]
         
         if task_ids:
             # Delete tasks
@@ -805,85 +827,79 @@ class TaskManagerApp(QMainWindow):
         """更新任务显示，包含详细的日志记录"""
         try:
             logger.info("开始更新任务显示")
-            tasks = self.task_manager.get_tasks()
-            self.task_table.setRowCount(len(tasks))
-            logger.debug(f"获取到 {len(tasks)} 个任务")
+            # 获取所有任务
+            self.tasks = self.task_manager.get_tasks()
             
-            for row, task in enumerate(tasks):
+            # 展开任务层级为平面列表
+            self.flat_tasks = []
+            def flatten_tasks(tasks, level=0):
+                for task in tasks:
+                    task['_level'] = level  # 添加层级信息
+                    self.flat_tasks.append(task)
+                    if 'children' in task:
+                        flatten_tasks(task['children'], level + 1)
+            
+            flatten_tasks(self.tasks)
+            self.task_table.setRowCount(len(self.flat_tasks))
+            logger.debug(f"获取到 {len(self.flat_tasks)} 个任务")
+            
+            for row, task in enumerate(self.flat_tasks):
                 try:
-                    # 解包任务数据
-                    task_id, title, description, priority, status, due_date, depends_on, parent_id = task
-                    logger.debug(f"处理任务: ID={task_id}, 标题={title}, 父任务ID={parent_id}")
+                    logger.debug(f"处理任务: ID={task['id']}, 标题={task['title']}, 父任务ID={task.get('parent_id')}")
                     
                     # 标准化状态并设置样式
-                    status = status.replace('_', ' ').title()
+                    status = task['status'].replace('_', ' ').title()
                     status_style = self.status_styles.get(status, {})
                     logger.debug(f"任务状态: {status}, 样式: {status_style}")
                     
                     # 设置标题
-                    title_item = QTableWidgetItem(title)
-                    self.task_table.setItem(row, 0, title_item)
+                    title_item = QTableWidgetItem()
+                    indent = "    " * task['_level']
+                    arrow = "→ " if task['_level'] > 0 else ""
+                    title_item.setText(f"{indent}{arrow}{task['title']}")
                     
-                    # 设置描述
-                    desc_item = QTableWidgetItem(description or "")
-                    self.task_table.setItem(row, 1, desc_item)
-                    
-                    # 设置状态
-                    status_item = QTableWidgetItem(f"{status}")
-                    status_item.setForeground(QColor(status_style.get('color', 'black')))
-                    self.task_table.setItem(row, 2, status_item)
-                    
-                    # 设置到期日期
-                    due_date_item = QTableWidgetItem(due_date or "")
-                    self.task_table.setItem(row, 3, due_date_item)
-                    
-                    # 应用任务层级样式
-                    style = self.task_hierarchy_styles['child' if parent_id else 'parent']
-                    logger.debug(f"应用{'子' if parent_id else '父'}任务样式")
-                    
-                    # 设置标题样式
-                    if parent_id:  # 子任务
-                        title_item.setText("    " + title)
-                        font = title_item.font()
-                        font.setItalic(True)
-                        title_item.setFont(font)
-                        # 子任务使用状态颜色但透明度降低
-                        color = QColor(status_style.get('text_color', '#666666'))
-                        color.setAlpha(200)  # 设置透明度
-                        title_item.setForeground(color)
-                    else:  # 父任务
+                    # 设置父/子任务样式
+                    if task['_level'] > 0:
+                        title_item.setForeground(QColor("#666666"))
+                        title_item.setIcon(QIcon(':/icons/subtask.png'))
+                    else:
                         font = title_item.font()
                         font.setBold(True)
                         title_item.setFont(font)
-                        # 父任务使用完整状态颜色
-                        title_item.setForeground(QColor(status_style.get('text_color', '#000000')))
                     
-                    # 设置整行样式
-                    for col in range(self.task_table.columnCount()):
-                        item = self.task_table.item(row, col)
+                    self.task_table.setItem(row, 0, title_item)
+                    
+                    # 设置描述
+                    desc_item = QTableWidgetItem(task.get('description', '') or '')
+                    desc_item.setForeground(QColor("#666666"))
+                    self.task_table.setItem(row, 1, desc_item)
+                    
+                    # 设置状态
+                    status_item = QTableWidgetItem(status)
+                    status_item.setForeground(QColor(status_style.get('color', 'black')))
+                    self.task_table.setItem(row, 2, status_item)
+                    
+                    # 根据状态设置行背景颜色
+                    for j in range(self.task_table.columnCount()):
+                        item = self.task_table.item(row, j)
                         if item:
-                            # 设置背景色
-                            item.setBackground(QColor(style['background']))
-                            # 设置文字颜色（状态列除外）
-                            if col != 2:  # 不是状态列
-                                if parent_id:
-                                    # 子任务使用状态颜色但透明度降低
-                                    color = QColor(status_style.get('text_color', '#666666'))
-                                    color.setAlpha(200)
-                                    item.setForeground(color)
-                                else:
-                                    # 父任务使用完整状态颜色
-                                    item.setForeground(QColor(status_style.get('text_color', '#000000')))
-                    
-                    # 如果是进行中的任务，设置字体加粗
-                    if status == 'In Progress':
-                        for col in range(self.task_table.columnCount()):
-                            item = self.task_table.item(row, col)
-                            if item:
-                                font = item.font()
-                                font.setBold(True)
-                                item.setFont(font)
-                                
+                            if task['status'] == 'not_started':
+                                item.setBackground(QColor('#FFEBEE'))  # 浅红色
+                                item.setForeground(QColor(status_style.get('text_color', '#D32F2F')))  # 红色字体
+                            elif task['status'] == 'in_progress':
+                                item.setBackground(QColor('#FFF3E0'))  # 浅橙色
+                                item.setForeground(QColor('#2196F3'))  # 蓝色字体
+                            elif task['status'] == 'completed':
+                                item.setBackground(QColor('#E8F5E9'))  # 浅绿色
+                                item.setForeground(QColor(status_style.get('text_color', '#2E7D32')))  # 绿色字体
+        
+                    # Due date
+                    due_date = task.get('due_date', '')
+                    due_date_item = QTableWidgetItem(due_date if due_date else "")
+                    if due_date:
+                        due_date_item.setForeground(QColor("#1976D2"))
+                    self.task_table.setItem(row, 3, due_date_item)
+
                 except Exception as e:
                     logger.error(f"处理任务时出错: {e}", exc_info=True)
                     continue  # 跳过处理出错的任务，继续处理下一个
@@ -919,6 +935,7 @@ class TaskManagerApp(QMainWindow):
                     
                     # 设置描述
                     desc_item = QTableWidgetItem(description or "")
+                    desc_item.setForeground(QColor("#666666"))
                     self.task_table.setItem(row, 1, desc_item)
                     
                     # 设置状态
@@ -942,7 +959,7 @@ class TaskManagerApp(QMainWindow):
                         title_item.setFont(font)
                         # 子任务使用状态颜色但透明度降低
                         color = QColor(status_style.get('text_color', '#666666'))
-                        color.setAlpha(200)
+                        color.setAlpha(200)  # 设置透明度
                         title_item.setForeground(color)
                     else:  # 父任务
                         font = title_item.font()

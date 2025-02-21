@@ -10,11 +10,7 @@ class TaskManager:
 
     def add_task(self, title, description="", priority="medium", status="not_started", due_date=None, depends_on=None, parent_id=None):
         """Adds a new task to the database."""
-        query = """
-        INSERT INTO tasks (title, description, priority, status, due_date, depends_on, parent_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        """
-        self.db.execute(query, (title, description, priority, status, due_date, depends_on, parent_id))
+        return self.db.insert_task(title, description, priority, status, due_date, depends_on, parent_id)
 
     def get_tasks(self):
         """Retrieves all tasks with hierarchy information."""
